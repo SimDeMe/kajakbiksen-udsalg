@@ -1,40 +1,3 @@
-function sanitizeHtml(input) {
-  if (!input) return '';
-  const wrapper = document.createElement('div');
-  wrapper.innerHTML = input;
-
-  const allowed = new Set(['P','BR','UL','OL','LI','STRONG','EM','A']);
-  const walk = (node) => {
-    const children = Array.from(node.childNodes);
-    for (const child of children) {
-      if (child.nodeType === 1) { // element
-        if (!allowed.has(child.tagName)) {
-          // erstat ikke-tilladte elementer med deres tekstindhold
-          const text = document.createTextNode(child.textContent || '');
-          node.replaceChild(text, child);
-        } else {
-          if (child.tagName === 'A') {
-            // fjern on* attributes
-            [...child.attributes].forEach(attr => {
-              if (attr.name.toLowerCase().startsWith('on')) child.removeAttribute(attr.name);
-            });
-            // tillad kun http/https/mailto/tel
-            const href = child.getAttribute('href') || '';
-            if (!/^(https?:|mailto:|tel:)/i.test(href)) child.removeAttribute('href');
-            child.setAttribute('rel','noopener noreferrer');
-            child.setAttribute('target','_blank');
-          } else {
-            // fjern alle øvrige attributes
-            [...child.attributes].forEach(attr => child.removeAttribute(attr.name));
-          }
-          walk(child);
-        }
-      }
-    }
-  };
-  walk(wrapper);
-  return wrapper.innerHTML.trim();
-}
 
 
 // 1) Sæt dit publicerede CSV-link her
@@ -79,6 +42,45 @@ function normalizeRow(r) {
 
   return { id, navn, kategori, basis, priceNow, normalPris, erTilbud, antal, vist, descHtml, kort };
 }
+
+function sanitizeHtml(input) {
+  if (!input) return '';
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = input;
+
+  const allowed = new Set(['P','BR','UL','OL','LI','STRONG','EM','A']);
+  const walk = (node) => {
+    const children = Array.from(node.childNodes);
+    for (const child of children) {
+      if (child.nodeType === 1) { // element
+        if (!allowed.has(child.tagName)) {
+          // erstat ikke-tilladte elementer med deres tekstindhold
+          const text = document.createTextNode(child.textContent || '');
+          node.replaceChild(text, child);
+        } else {
+          if (child.tagName === 'A') {
+            // fjern on* attributes
+            [...child.attributes].forEach(attr => {
+              if (attr.name.toLowerCase().startsWith('on')) child.removeAttribute(attr.name);
+            });
+            // tillad kun http/https/mailto/tel
+            const href = child.getAttribute('href') || '';
+            if (!/^(https?:|mailto:|tel:)/i.test(href)) child.removeAttribute('href');
+            child.setAttribute('rel','noopener noreferrer');
+            child.setAttribute('target','_blank');
+          } else {
+            // fjern alle øvrige attributes
+            [...child.attributes].forEach(attr => child.removeAttribute(attr.name));
+          }
+          walk(child);
+        }
+      }
+    }
+  };
+  walk(wrapper);
+  return wrapper.innerHTML.trim();
+}
+
 
 // 4) Render
 function render(products) {
