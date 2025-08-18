@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kajakbiksen – Udsalg</title>
+  <meta name="description" content="Lagerliste med kajakker og udstyr. Ring for køb og afhentning." />
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Papa Parse til CSV (nemt og stabilt) -->
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <h1>Kajakbiksen – Udsalg</h1>
+      <div class="contact">
+        <div><strong>Telefon:</strong> <a href="tel:+45XXXXXXXX">+45 XX XX XX XX</a></div>
+        <div><strong>Adresse:</strong> Skriv-adresse-her</div>
+        <div><strong>Åbningstider:</strong> Skriv-tider-her</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="controls">
+      <input id="search" type="search" placeholder="Søg efter produkt eller kategori…" aria-label="Søg" />
+      <select id="category" aria-label="Filter efter kategori">
+        <option value="">Alle kategorier</option>
+      </select>
+      <select id="sort" aria-label="Sortering">
+        <option value="navn-asc">Navn (A–Å)</option>
+        <option value="pris-asc">Pris (stigende)</option>
+        <option value="pris-desc">Pris (faldende)</option>
+      </select>
+    </section>
+
+    <section id="grid" class="grid" aria-live="polite"></section>
+
+    <template id="card">
+      <article class="card">
+        <img class="thumb" alt="" loading="lazy" />
+        <div class="meta">
+          <h2 class="title"></h2>
+          <div class="cat"></div>
+          <p class="desc"></p>
+          <div class="price">
+            <span class="before hidden"></span>
+            <span class="now"></span>
+          </div>
+          <div class="stock"></div>
+        </div>
+      </article>
+    </template>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <small>&copy; Kajakbiksen. Ring for køb og afhentning. Ingen online betaling.</small>
+    </div>
+  </footer>
+</body>
+</html>
