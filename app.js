@@ -149,7 +149,15 @@ function applyFilters(data) {
 
 function populateCategories(data) {
   const sel = document.getElementById('category');
-  const cats = uniqueSorted(data.map(p => p.kategori));
+  sel.innerHTML = '<option value="">Alle kategorier</option>'; // reset + tilføj "Alle"
+
+  // Tag kun kategorier med mindst ét produkt, der er vist og på lager
+  const cats = uniqueSorted(
+    data
+      .filter(p => p.vist && p.antal > 0)
+      .map(p => p.kategori)
+  );
+
   for (const c of cats) {
     const opt = document.createElement('option');
     opt.value = c;
