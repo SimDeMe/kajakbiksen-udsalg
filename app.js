@@ -1,3 +1,42 @@
+function sanitizeHtml(input) {
+  if (!input) return '';
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = input;
+
+  const allowed = new Set(['P','BR','UL','OL','LI','STRONG','EM','A']);
+  const walk = (node) => {
+    const children = Array.from(node.childNodes);
+    for (const child of children) {
+      if (child.nodeType === 1) { // element
+        if (!allowed.has(child.tagName)) {
+          // erstat ikke-tilladte elementer med deres tekstindhold
+          const text = document.createTextNode(child.textContent || '');
+          node.replaceChild(text, child);
+        } else {
+          if (child.tagName === 'A') {
+            // fjern on* attributes
+            [...child.attributes].forEach(attr => {
+              if (attr.name.toLowerCase().startsWith('on')) child.removeAttribute(attr.name);
+            });
+            // tillad kun http/https/mailto/tel
+            const href = child.getAttribute('href') || '';
+            if (!/^(https?:|mailto:|tel:)/i.test(href)) child.removeAttribute('href');
+            child.setAttribute('rel','noopener noreferrer');
+            child.setAttribute('target','_blank');
+          } else {
+            // fjern alle øvrige attributes
+            [...child.attributes].forEach(attr => child.removeAttribute(attr.name));
+          }
+          walk(child);
+        }
+      }
+    }
+  };
+  walk(wrapper);
+  return wrapper.innerHTML.trim();
+}
+
+
 // 1) Sæt dit publicerede CSV-link her
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxWtBHcDLLEXaq_U7owrg-JJ47QPU5X8T3-qeNs-JGFT4J7FttToIROpZowncHRZslqm9__RQ5MIHz/pub?gid=1702983393&single=true&output=csv';
 
@@ -25,19 +64,20 @@ function normalizeRow(r) {
   const basis = toNumber(r['Basispris']);      // ex moms
   const priceNow = toNumber(r['Pris i alt']);  // inkl moms
   const antal = toNumber(r['Antal']);
-  // Tom Vist betyder “må vises”. 0 betyder “må ikke vises”.
+
   const vistRaw = (r['Vist'] ?? '').toString().trim();
   const vist = (vistRaw === '' ? 1 : toNumber(vistRaw)) === 1;
 
   const normalPris = basis > 0 ? basis * 1.25 : priceNow;
-  const erTilbud = priceNow > 0 && normalPris > 0 && priceNow < (normalPris - 0.49); // 0,49 tolerance
-  const kort = (r['Kort beskrivelse'] || '').replace(/<\/?[^>]+(>|$)/g, '').trim(); // strip simpel HTML
+  const erTilbud = priceNow > 0 && normalPris > 0 && priceNow < (normalPris - 0.49);
 
-  return { id, navn, kategori, basis, priceNow, normalPris, erTilbud, antal, vist, kort };
-}
+  const kortRaw = (r['Kort beskrivelse'] || '').toString();
+  const langRaw = (r['Beskrivelse'] || '').toString();
 
-function uniqueSorted(arr) {
-  return Array.from(new Set(arr)).filter(Boolean).sort((a,b)=>a.localeCompare(b,'da'));
+  const descHtml = sanitizeHtml(langRaw || kortRaw);   // BRUG lang først
+  const kort = sanitizeHtml(kortRaw);                  // stadig rart at have kort
+
+  return { id, navn, kategori, basis, priceNow, normalPris, erTilbud, antal, vist, descHtml, kort };
 }
 
 // 4) Render
@@ -64,7 +104,7 @@ function render(products) {
 
     h2.textContent = p.navn || `#${p.id}`;
     cat.textContent = p.kategori || '';
-    desc.textContent = p.kort || '';
+    desc.innerHTML = p.descHtml || '';
 
     if (p.erTilbud) {
       before.textContent = dkk(p.normalPris);

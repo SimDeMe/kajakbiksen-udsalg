@@ -16,6 +16,9 @@ body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helve
 .meta .title { margin: 0; font-size: 1.1rem; }
 .meta .cat { color: #475569; font-size: .95rem; margin-bottom: .25rem; }
 .meta .desc { color: #334155; margin: .25rem 0 .5rem; max-width: 70ch; }
+.meta .desc { margin-top: .25rem; line-height: 1.5; }
+.meta .desc p { margin: 0 0 .5rem; }
+
 .price { display: flex; align-items: baseline; gap: .6rem; }
 .price .before { text-decoration: line-through; color: #64748b; }
 .price .now { font-weight: 700; }
