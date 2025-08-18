@@ -1,5 +1,3 @@
-
-
 // 1) Sæt dit publicerede CSV-link her
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxWtBHcDLLEXaq_U7owrg-JJ47QPU5X8T3-qeNs-JGFT4J7FttToIROpZowncHRZslqm9__RQ5MIHz/pub?gid=1702983393&single=true&output=csv';
 
@@ -16,11 +14,15 @@ function dkk(n) {
 }
 function toNumber(v) {
   if (v == null) return 0;
-  const s = String(v).trim().replace(/\./g, '.').replace(',', '.');
+  const s = String(v).trim().replace(',', '.');
   const n = parseFloat(s);
   return isNaN(n) ? 0 : n;
 }
 function normalizeRow(r) {
+  if (!r['ID']) {
+    console.log("Row uden ID:", r);
+    return null;
+  }
   const id = String(r['ID'] || '').trim();
   const navn = (r['Navn'] || '').trim();
   const kategori = (r['Kategori'] || '').trim().replace(/\.$/, '');
@@ -34,8 +36,8 @@ function normalizeRow(r) {
   const normalPris = basis > 0 ? basis * 1.25 : priceNow;
   const erTilbud = priceNow > 0 && normalPris > 0 && priceNow < (normalPris - 0.49);
 
-  const kortRaw = (r['Kort beskrivelse'] || '').toString();
-  const langRaw = (r['Beskrivelse'] || '').toString();
+  const kortRaw = (r['Kort beskrivelse'] ?? '').toString();
+  const langRaw = (r['Beskrivelse'] ?? '').toString();
 
   const descHtml = sanitizeHtml(langRaw || kortRaw);   // BRUG lang først
   const kort = sanitizeHtml(kortRaw);                  // stadig rart at have kort
@@ -54,22 +56,18 @@ function sanitizeHtml(input) {
     for (const child of children) {
       if (child.nodeType === 1) { // element
         if (!allowed.has(child.tagName)) {
-          // erstat ikke-tilladte elementer med deres tekstindhold
           const text = document.createTextNode(child.textContent || '');
           node.replaceChild(text, child);
         } else {
           if (child.tagName === 'A') {
-            // fjern on* attributes
             [...child.attributes].forEach(attr => {
               if (attr.name.toLowerCase().startsWith('on')) child.removeAttribute(attr.name);
             });
-            // tillad kun http/https/mailto/tel
             const href = child.getAttribute('href') || '';
             if (!/^(https?:|mailto:|tel:)/i.test(href)) child.removeAttribute('href');
             child.setAttribute('rel','noopener noreferrer');
             child.setAttribute('target','_blank');
           } else {
-            // fjern alle øvrige attributes
             [...child.attributes].forEach(attr => child.removeAttribute(attr.name));
           }
           walk(child);
@@ -81,6 +79,9 @@ function sanitizeHtml(input) {
   return wrapper.innerHTML.trim();
 }
 
+function uniqueSorted(arr) {
+  return [...new Set(arr.filter(Boolean))].sort((a,b)=>a.localeCompare(b,'da'));
+}
 
 // 4) Render
 function render(products) {
@@ -128,7 +129,7 @@ function applyFilters(data) {
   const cat = document.getElementById('category').value;
   const sort = document.getElementById('sort').value;
 
-  let items = data.filter(p => p.vist && p.antal > 0);
+  let items = data.filter(p => p && p.vist && p.antal > 0);
 
   if (q) {
     items = items.filter(p =>
@@ -168,9 +169,8 @@ async function init() {
       skipEmptyLines: true,
       complete: (results) => {
         const rows = results.data;
-        const data = rows.map(normalizeRow);
+        const data = rows.map(normalizeRow).filter(Boolean); // <- filtrér null fra
         populateCategories(data);
-        // events
         document.getElementById('search').addEventListener('input', () => applyFilters(data));
         document.getElementById('category').addEventListener('change', () => applyFilters(data));
         document.getElementById('sort').addEventListener('change', () => applyFilters(data));
