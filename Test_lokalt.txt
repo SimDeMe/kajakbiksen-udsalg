@@ -1,0 +1,32 @@
+Test lokalt:
+
+Man kan lave en lokal server, som kører siden ved at stå i repo i terminal og skrive kommandoen:
+
+python3 -m http.server 8080
+
+Siden kan så testes i browser ved at skrive:
+
+http://localhost:8080/
+
+
+Link til csv fra sheets:
+https://docs.google.com/spreadsheets/d/e/2PACX-1vTxWtBHcDLLEXaq_U7owrg-JJ47QPU5X8T3-qeNs-JGFT4J7FttToIROpZowncHRZslqm9__RQ5MIHz/pub?output=csv
+
+
+
+GID fra URL: 1702983393
+
+Stabilt export-link (erstats SPREADSHEET_ID med det fra din browser-URL):
+https://docs.google.com/spreadsheets/d/1I7y9md-xs0FrEKrAppuyw7te8wuahaSPDgewH-2xxxI/export?format=csv&gid=1702983393
+
+Sådan finder du SPREADSHEET_ID:
+1) Åbn arket i browseren.
+2) Kopiér den lange streng mellem /d/ og /edit i URL’en.
+   Eksempel: https://docs.google.com/spreadsheets/d/1I7y9md-xs0FrEKrAppuyw7te8wuahaSPDgewH-2xxxI/edit#gid=1702983393
+   Her er SPREADSHEET_ID = ABC123DEF456GHI789.
+
+Vigtigt:
+- Del arket som “Anyone with the link → Viewer”, ellers får du 401/403.
+- Test linket ved at åbne det i en ny fane. Du skal se rå CSV, ikke en Google-side.
+
+https://docs.google.com/spreadsheets/d/1I7y9md-xs0FrEKrAppuyw7te8wuahaSPDgewH-2xxxI/edit?usp=sharing

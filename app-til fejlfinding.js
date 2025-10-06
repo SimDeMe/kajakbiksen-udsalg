@@ -1,5 +1,11 @@
+console.log('APP LOADED', new Date().toISOString());
+window.onerror = (m, src, line, col, err) => {
+  console.error('GLOBAL JS ERROR:', m, src, line+':'+col, err);
+};
+
+
 // 1) Sæt dit publicerede CSV-link her
-const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1I7y9md-xs0FrEKrAppuyw7te8wuahaSPDgewH-2xxxI/export?format=csv&gid=1702983393';
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxWtBHcDLLEXaq_U7owrg-JJ47QPU5X8T3-qeNs-JGFT4J7FttToIROpZowncHRZslqm9__RQ5MIHz/pub?gid=1702983393&single=true&output=csv';
 
 // 2) Grundindstillinger
 const IMAGE_BASE = 'img'; // billederne ligger i /img/{ID}.jpg
@@ -14,14 +20,7 @@ function dkk(n) {
 }
 function toNumber(v) {
   if (v == null) return 0;
-  let s = String(v).trim();
-  // Fjern ikke-brydende mellemrum og almindelige mellemrum
-  s = s.replace(/\u00A0/g, '');
-  s = s.replace(/\s+/g, '');
-  // Fjern tusindtals-punktummer
-  s = s.replace(/\./g, '');
-  // Skift dansk komma til punktum som decimal
-  s = s.replace(',', '.');
+  const s = String(v).trim().replace(',', '.');
   const n = parseFloat(s);
   return isNaN(n) ? 0 : n;
 }
@@ -173,29 +172,54 @@ function populateCategories(data) {
   }
 }
 
-// 6) Init
-async function init() {
+function safeNormalize(row, idx) {
   try {
+    return normalizeRow(row);
+  } catch (err) {
+    console.error('normalizeRow fejlede på række', idx, row, err);
+    return null;
+  }
+}
+
+async function init() {
+  const grid = document.getElementById('grid');
+  try {
+    console.log('SHEET_CSV_URL =', SHEET_CSV_URL);
+    if (!SHEET_CSV_URL) throw new Error('SHEET_CSV_URL mangler');
+
     const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Kunne ikke hente CSV fra Google Sheets.');
+    console.log('Fetch status =', res.status, res.statusText);
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + res.statusText);
+
     const csvText = await res.text();
+    console.log('CSV preview:', csvText.slice(0, 200));
+
     Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const rows = results.data;
-        const data = rows.map(normalizeRow).filter(Boolean); // <- filtrér null fra
+        console.log('CSV headers:', results.meta?.fields);
+        console.log('Rækker læst:', results.data.length);
+
+        const data = results.data.map(safeNormalize).filter(Boolean);
+        window.__DATA__ = data;
+
         populateCategories(data);
         document.getElementById('search').addEventListener('input', () => applyFilters(data));
         document.getElementById('category').addEventListener('change', () => applyFilters(data));
         document.getElementById('sort').addEventListener('change', () => applyFilters(data));
         applyFilters(data);
+      },
+      error: (err) => {
+        console.error('Papa parse error:', err);
+        throw new Error('Papa parse error: ' + (err?.message || err));
       }
     });
   } catch (e) {
-    const grid = document.getElementById('grid');
+    console.error('INIT ERROR:', e);
     grid.innerHTML = `<p>Kunne ikke hente data. Tjek at arket er publiceret som CSV og at SHEET_CSV_URL er korrekt.</p>`;
-    console.error(e);
   }
 }
+
+document.addEventListener('DOMContentLoaded', init);
 document.addEventListener('DOMContentLoaded', init);

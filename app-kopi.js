@@ -14,14 +14,7 @@ function dkk(n) {
 }
 function toNumber(v) {
   if (v == null) return 0;
-  let s = String(v).trim();
-  // Fjern ikke-brydende mellemrum og almindelige mellemrum
-  s = s.replace(/\u00A0/g, '');
-  s = s.replace(/\s+/g, '');
-  // Fjern tusindtals-punktummer
-  s = s.replace(/\./g, '');
-  // Skift dansk komma til punktum som decimal
-  s = s.replace(',', '.');
+  const s = String(v).trim().replace(',', '.');
   const n = parseFloat(s);
   return isNaN(n) ? 0 : n;
 }

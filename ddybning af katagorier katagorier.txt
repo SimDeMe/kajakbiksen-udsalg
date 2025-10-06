@@ -1,0 +1,149 @@
+Promt for uddybning af katagorier katagorier
+
+Det er dog som om, at der er katagorier, med underkatagorier på kajakbiksen.dk - men ikke på vores nye site
+
+Det giver mening. På den gamle side har de tydeligvis et hierarki (kategori → underkategori). Vores simple version har kun én “Kategori”-kolonne, så alt ender i samme gryde. Vi kan løse det på to måder:
+
+Hurtig løsning uden at pille i arket
+
+Vi gætter underkategorier ud fra tekstmønstre i din eksisterende Kategori. Typiske separatorer: >, /, – eller -. Eksempler:
+	•	Tilbehør > Finner
+	•	Transport / Bilen
+	•	Ror og pedaler - Reservedele
+
+1) Tilføj en ekstra dropdown i index.html
+
+Find filter-sektionen og indsæt en ny select til underkategori:
+
+<section class="controls">
+  <input id="search" type="search" placeholder="Søg efter produkt eller kategori…" aria-label="Søg" />
+  <select id="category" aria-label="Filter efter kategori">
+    <option value="">Alle kategorier</option>
+  </select>
+  <select id="subcategory" aria-label="Filter efter underkategori" class="hidden">
+    <option value="">Alle underkategorier</option>
+  </select>
+  <select id="sort" aria-label="Sortering">
+    <option value="navn-asc">Navn (A–Å)</option>
+    <option value="pris-asc">Pris (stigende)</option>
+    <option value="pris-desc">Pris (faldende)</option>
+  </select>
+</section>
+
+
+Lidt CSS så den ikke bryder layoutet:
+.hidden { display: none; }
+@media (max-width: 699px){
+  .controls { grid-template-columns: 1fr; }
+}
+@media (min-width: 700px){
+  .controls { grid-template-columns: 1fr 220px 220px 200px; }
+}
+
+
+2) Opdatér parsing i app.js (tilføj main/sub kategori)
+
+I normalizeRow erstat den nuværende kategori-linje med dette:
+
+const rawCat = (r['Kategori'] || '').trim().replace(/\.$/, '');
+// split på >, /, – (en-dash), — (em-dash) eller -
+const parts = rawCat.split(/\s*(?:>|\/|—|–|-)\s*/);
+const kategori_main = parts[0] || '';
+const kategori_sub  = parts[1] || ''; // vi holder os til to niveauer
+
+
+
+Og i return-objektet, tilføj felterne:
+
+return { id, navn, kategori: rawCat, kategori_main, kategori_sub, basis, priceNow, normalPris, erTilbud, antal, vist, descHtml, kort };
+
+
+3) Justér filtrering til at bruge begge niveauer
+
+I applyFilters læs begge selects og filtrér:
+const catMain = document.getElementById('category').value;
+const catSub  = document.getElementById('subcategory').value;
+
+let items = data.filter(p => p && p.vist && p.antal > 0);
+
+if (q) {
+  items = items.filter(p =>
+    (p.navn && p.navn.toLowerCase().includes(q)) ||
+    (p.kategori && p.kategori.toLowerCase().includes(q)) ||
+    (p.id && p.id.toLowerCase().includes(q))
+  );
+}
+if (catMain) items = items.filter(p => p.kategori_main === catMain);
+if (catSub)  items = items.filter(p => p.kategori_sub === catSub);
+
+render(items);
+
+
+4) Populér dropdowns hierarkisk
+
+Erstat populateCategories med denne, og tilføj en helper til at opdatere underkategorier:
+function populateCategories(data) {
+  const selMain = document.getElementById('category');
+  const selSub  = document.getElementById('subcategory');
+  selMain.innerHTML = '<option value="">Alle kategorier</option>';
+  selSub.innerHTML  = '<option value="">Alle underkategorier</option>';
+  selSub.classList.add('hidden');
+
+  // byg map: main -> set(sub)
+  const live = data.filter(p => p.vist && p.antal > 0);
+  const map = new Map();
+  for (const p of live) {
+    const main = p.kategori_main || p.kategori || '';
+    const sub  = p.kategori_sub || '';
+    if (!main) continue;
+    if (!map.has(main)) map.set(main, new Set());
+    if (sub) map.get(main).add(sub);
+  }
+
+  // fyld hovedkategorier
+  const mains = Array.from(map.keys()).sort((a,b)=>a.localeCompare(b,'da'));
+  for (const m of mains) {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = m;
+    selMain.appendChild(opt);
+  }
+
+  // når man vælger en main, opdater underkategorier
+  selMain.addEventListener('change', () => updateSubOptions(map));
+  // initial tom state
+  updateSubOptions(map);
+}
+
+function updateSubOptions(map) {
+  const selMain = document.getElementById('category');
+  const selSub  = document.getElementById('subcategory');
+  const val = selMain.value;
+
+  selSub.innerHTML = '<option value="">Alle underkategorier</option>';
+
+  if (!val || !map.has(val) || map.get(val).size === 0) {
+    selSub.classList.add('hidden');
+    // trigger filter med tom sub
+    applyFilters(window.__DATA__ || []);
+    return;
+  }
+
+  const subs = Array.from(map.get(val)).sort((a,b)=>a.localeCompare(b,'da'));
+  for (const s of subs) {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;
+    selSub.appendChild(opt);
+  }
+  selSub.classList.remove('hidden');
+  selSub.addEventListener('change', () => applyFilters(window.__DATA__ || []));
+}
+
+
+Og i init() gemmer du data globalt, så updateSubOptions kan kalde applyFilters:
+const data = rows.map(normalizeRow).filter(Boolean);
+window.__DATA__ = data;
+populateCategories(data);
+// event handlers...
+
+Det var det. Så får du en pæn hovedkategori-dropdown, der kun viser underkategorier, når de faktisk findes for den valgte kategori. Ingen ændringer i dit sheet nødvendig, så længe “hierarkiet” kan genkendes via en af separatorerne.
+
